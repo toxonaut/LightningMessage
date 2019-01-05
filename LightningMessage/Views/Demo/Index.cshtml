@@ -1,0 +1,184 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+    <link rel="stylesheet" type="text/css" href="~/css/MyStyles.css?version=3.2">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/clipboard@2/dist/clipboard.min.js"></script>
+    <script type="text/javascript">
+        function round(value, decimals) {
+            return Number(Math.round(value + 'e' + decimals) + 'e-' + decimals);
+        }
+
+        function executeMessageUpdate() {
+            var message = $('#BigMemo').text();
+            $.ajax({
+                url: '/msg/checkmessageupdate/' + message,
+                success: function (data) {
+                    $('#BigMemo').text(data);
+                }
+            });
+            setTimeout(executeMessageUpdate, 5000); // you could choose not to continue on failure...
+        }
+
+        $(document).ready(function () {
+            new ClipboardJS('.btn2');
+            const $memo = document.querySelector('#memo');
+            const $resultSatoshi = document.querySelector('#resultSatoshi');
+            const $resultUSD = document.querySelector('#resultUSD');
+            const typeHandler = function (e) {
+                $resultSatoshi.innerHTML = e.target.value.length;
+                $resultUSD.innerHTML = round((e.target.value.length * usd) / 100000000, 5);
+            }
+            $memo.addEventListener('input', typeHandler) // register for oninput
+            $memo.addEventListener('propertychange', typeHandler) // for IE8
+
+            $('#buttonPayMessage').click(function () {
+                var textbox = document.getElementById("memo");
+                if (textbox.value.length <= 1000 && textbox.value.length >= 5) {
+                    var memo = $('#memo').val();
+                    $.ajax({
+                        type: 'GET',
+                        url: '/msg/sendMessage/' + memo,
+                        success: function (result) {
+                            var image = '<img src="Bills/' + result.billFilename + '" alt="Bill" width="500" height="500">';
+                            $('#resultImage').html(image);
+                            $('#billText').text(result.billText);
+                            $('#copyClipboardButton').show();
+                            $.ajax({
+                                type: 'GET',
+                                url: '/msg/checkpaid/',
+                                success: function (result) {
+                                    var image = '<img src="Bills/' + result.paid + '" alt="Bill" width="500" height="500">';
+                                    $('#resultImage').html(image);
+                                    $('#BigMemo').text(result.message);
+                                    $.ajax({
+                                        type: 'GET',
+                                        url: '/msg/wait/',
+                                        success: function (result) {
+                                            $('#EditFieldset').hide();
+                                            $('#resultImage').html("");
+                                            document.getElementById("memo").value = '';
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+                else {
+                    alert("Make sure the input is between 5-1000 characters long")
+                }
+            });
+
+            $('#buttonHistory').click(function () {
+                $.ajax({
+                    type: 'GET',
+                    url: '/msg/sendViewHistoryRequest/',
+                    success: function (result) {
+                        var image = '<img src="Bills/' + result + '" alt="Bill" width="500" height="500">';
+                        $('#resultImageHistory').html(image);
+                        $.ajax({
+                            type: 'GET',
+                            url: '/msg/checkpaidHistory/',
+                            success: function (result) {
+                                var image = '<img src="Bills/' + result.paid + '" alt="Bill" width="500" height="500">';
+                                $('#resultImageHistory').html("");
+                                $('#historyText').html(result);
+                                $.ajax({
+                                    type: 'GET',
+                                    url: '/msg/waitHistory/',
+                                    success: function (result) {
+                                        $('#HistoryFieldset').hide();
+                                        $('#historyText').text('');
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            $('#EditButton').click(function () {
+                $('#billText').text("");
+                $('#EditFieldset').toggle();
+
+            });
+            $('#HistoryButton').click(function () {
+                const $resultHistoryUSD = document.querySelector('#resultHistoryUSD');
+                $resultHistoryUSD.innerHTML = round((100 * usd) / 100000000, 5);
+                $('#HistoryFieldset').toggle();
+
+            });
+            $('#NodeButton').click(function () {
+                $('#NodeFieldset').toggle();
+            });
+
+            $('#copyClipboardButton').click(function () {
+
+                var copyText = document.getElementById("nodeinfo");
+                var textArea = document.createElement("textarea");
+                textArea.value = copyText.textContent;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand("Copy");
+                textArea.remove();
+
+            });
+            setTimeout(executeMessageUpdate, 5000);
+        });
+
+        var xmlhttp = new XMLHttpRequest();
+        var url = "https://api.coindesk.com/v1/bpi/currentprice.json";
+
+        xmlhttp.onreadystatechange = function () {
+            if (this.readyState == 4 && this.status == 200) {
+                var json = JSON.parse(this.responseText);
+                parseJson(json);
+            }
+        };
+
+        xmlhttp.open("GET", url, true);
+        xmlhttp.send();
+        var usd = 3000;
+        function parseJson(json) {
+            usd = json["bpi"]["USD"]["rate_float"];
+            document.getElementById("price").innerHTML = round(usd, 1);
+        }
+
+    </script>
+</head>
+<body>
+    <fieldset style="border-width:0px;">
+        <div id="BigMemo" class="cloud-text cloud-title">@ViewData["Message"]</div>
+     </fieldset>
+    <fieldset id="Menu" class="normal-menu">
+        <input type="button" class="btn btn-primary" value="Edit Text" id="EditButton" />
+        <input type="button" class="btn btn-primary" value="Show History" id="HistoryButton" />
+        <input type="button" class="btn btn-primary" value="Node info" id="NodeButton" />
+    </fieldset>
+    <fieldset id="EditFieldset" class="normal normal-edit">
+        Your message: <input type="text" id="memo" size="30"/>
+        <input type="button" value="Pay" class="btn btn-primary" id="buttonPayMessage" /> &nbsp;<span class="normal" id="resultSatoshi"></span> Satoshi ($<span class="normal" id="resultUSD"></span> USD) at a price of $<span class="normal" id="price"></span> USD per Bitcoin
+        <div id="resultImage"></div>
+        <div id="billText"></div>
+    </fieldset>
+    <fieldset id="NodeFieldset" class="normal normal-node">
+        Connect to this node:<span class="normal" id="nodeinfo"> 03f38829a9b9131e3a0887ca21fd042f2d07bd7f151fffefcc3d1585f24c1b3e7e@85.2.192.111:9735</span>
+        <button id="copyClipboardButton" class="btn btn-primary" data-clipboard-target="#nodeinfo">
+            <img src="~/css/clippy.svg" style="width:calc(10px + 1.2vw);height:calc(10px + 1.2vw)" alt="Copy to clipboard">
+        </button>
+    </fieldset>
+    <fieldset id="HistoryFieldset" class="normal normal-history" >
+        Pay 100 Satoshi ($<span class="normal" id="resultHistoryUSD"></span> USD) to <input type="button" class="btn btn-primary" value="View" id="buttonHistory" /><span class="normal">&nbsp;the last 10 messages</span>
+        <div id="resultImageHistory"></div>
+        <div id="historyText"></div>
+    </fieldset>
+</body>
+</html>
