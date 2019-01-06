@@ -8,7 +8,7 @@
 <head>
     <meta name="viewport" content="width=device-width" />
     <title>Index</title>
-    <link rel="stylesheet" type="text/css" href="~/css/MyStyles.css?version=3.2">
+    <link rel="stylesheet" type="text/css" href="~/css/MyStyles.css?version=3.3">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipboard@2/dist/clipboard.min.js"></script>
     <script type="text/javascript">
@@ -50,7 +50,7 @@
                             var image = '<img src="Bills/' + result.billFilename + '" alt="Bill" width="500" height="500">';
                             $('#resultImage').html(image);
                             $('#billText').text(result.billText);
-                            $('#copyClipboardButton').show();
+                            $('#copyEditBillButton').show();
                             $.ajax({
                                 type: 'GET',
                                 url: '/msg/checkpaid/',
@@ -64,6 +64,7 @@
                                         success: function (result) {
                                             $('#EditFieldset').hide();
                                             $('#resultImage').html("");
+                                            $('#copyEditBillButton').hide();
                                             document.getElementById("memo").value = '';
                                         }
                                     });
@@ -82,8 +83,10 @@
                     type: 'GET',
                     url: '/msg/sendViewHistoryRequest/',
                     success: function (result) {
-                        var image = '<img src="Bills/' + result + '" alt="Bill" width="500" height="500">';
+                        var image = '<img src="Bills/' + result.billFilename + '" alt="Bill" width="500" height="500">';
                         $('#resultImageHistory').html(image);
+                        $('#historyBillText').text(result.billText);
+                        $('#copyHistoryBillButton').show();
                         $.ajax({
                             type: 'GET',
                             url: '/msg/checkpaidHistory/',
@@ -91,6 +94,8 @@
                                 var image = '<img src="Bills/' + result.paid + '" alt="Bill" width="500" height="500">';
                                 $('#resultImageHistory').html("");
                                 $('#historyText').html(result);
+                                $('#historyBillText').text("");
+                                $('#copyHistoryBillButton').hide();
                                 $.ajax({
                                     type: 'GET',
                                     url: '/msg/waitHistory/',
@@ -113,6 +118,7 @@
             $('#HistoryButton').click(function () {
                 const $resultHistoryUSD = document.querySelector('#resultHistoryUSD');
                 $resultHistoryUSD.innerHTML = round((100 * usd) / 100000000, 5);
+                $('#historyBillText').text("");
                 $('#HistoryFieldset').toggle();
 
             });
@@ -120,17 +126,25 @@
                 $('#NodeFieldset').toggle();
             });
 
-            $('#copyClipboardButton').click(function () {
-
-                var copyText = document.getElementById("nodeinfo");
+            $('#copyNodeButton').click(function () {
+                CopyText("nodeInfo");
+            });
+            $('#copyEditBillButton').click(function () {
+                CopyText("billText");
+            });
+            $('#copyHistoryBillButton').click(function () {
+                CopyText("historyBillText");
+            });
+            function CopyText(textElement) {
+                var copyText = document.getElementById(textElement);
                 var textArea = document.createElement("textarea");
                 textArea.value = copyText.textContent;
                 document.body.appendChild(textArea);
                 textArea.select();
                 document.execCommand("Copy");
                 textArea.remove();
+            }
 
-            });
             setTimeout(executeMessageUpdate, 5000);
         });
 
@@ -157,27 +171,34 @@
 <body>
     <fieldset style="border-width:0px;">
         <div id="BigMemo" class="cloud-text cloud-title">@ViewData["Message"]</div>
-     </fieldset>
+    </fieldset>
     <fieldset id="Menu" class="normal-menu">
         <input type="button" class="btn btn-primary" value="Edit Text" id="EditButton" />
         <input type="button" class="btn btn-primary" value="Show History" id="HistoryButton" />
         <input type="button" class="btn btn-primary" value="Node info" id="NodeButton" />
     </fieldset>
     <fieldset id="EditFieldset" class="normal normal-edit">
-        Your message: <input type="text" id="memo" size="30"/>
+        Your message: <input type="text" id="memo" size="30" />
         <input type="button" value="Pay" class="btn btn-primary" id="buttonPayMessage" /> &nbsp;<span class="normal" id="resultSatoshi"></span> Satoshi ($<span class="normal" id="resultUSD"></span> USD) at a price of $<span class="normal" id="price"></span> USD per Bitcoin
         <div id="resultImage"></div>
-        <div id="billText"></div>
-    </fieldset>
-    <fieldset id="NodeFieldset" class="normal normal-node">
-        Connect to this node:<span class="normal" id="nodeinfo"> 03f38829a9b9131e3a0887ca21fd042f2d07bd7f151fffefcc3d1585f24c1b3e7e@85.2.192.111:9735</span>
-        <button id="copyClipboardButton" class="btn btn-primary" data-clipboard-target="#nodeinfo">
-            <img src="~/css/clippy.svg" style="width:calc(10px + 1.2vw);height:calc(10px + 1.2vw)" alt="Copy to clipboard">
+        <span id="billText"></span>
+        <button id="copyEditBillButton" style="display: none" class="btn btn-primary">
+            <img src="~/css/clippy.svg" class="btn-pic" alt="Copy to clipboard">
         </button>
     </fieldset>
-    <fieldset id="HistoryFieldset" class="normal normal-history" >
+    <fieldset id="NodeFieldset" class="normal normal-node">
+        Connect to this node:<span class="normal" id="nodeInfo"> 03f38829a9b9131e3a0887ca21fd042f2d07bd7f151fffefcc3d1585f24c1b3e7e@85.2.192.111:9735</span>
+        <button id="copyNodeButton" class="btn btn-primary">
+            <img src="~/css/clippy.svg" class="btn-pic" alt="Copy to clipboard">
+        </button>
+    </fieldset>
+    <fieldset id="HistoryFieldset" class="normal normal-history">
         Pay 100 Satoshi ($<span class="normal" id="resultHistoryUSD"></span> USD) to <input type="button" class="btn btn-primary" value="View" id="buttonHistory" /><span class="normal">&nbsp;the last 10 messages</span>
         <div id="resultImageHistory"></div>
+        <span id="historyBillText"></span>
+        <button id="copyHistoryBillButton" style="display: none" class="btn btn-primary">
+            <img src="~/css/clippy.svg" class="btn-pic" alt="Copy to clipboard">
+        </button>
         <div id="historyText"></div>
     </fieldset>
 </body>

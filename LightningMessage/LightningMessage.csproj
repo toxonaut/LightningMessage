@@ -9,7 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Views\Demo\Index.cshtml" />
+    <None Include="Views\Lightning\Index.cshtml" />
   </ItemGroup>
 
   <ItemGroup>

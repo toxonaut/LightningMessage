@@ -12,12 +12,12 @@ using System.Text;
 namespace LightningMessage.Controllers
 {
     [Route("msg")]
-    public class DemoController : Controller
+    public class LightningController : Controller
     {
         private readonly IHostingEnvironment _hostingEnvironment;
         private AppDataProvider _myData;
 
-        public DemoController(IApplicationLifetime appLifetime, IHostingEnvironment hostingEnvironment, AppDataProvider myAppDataProvider)
+        public LightningController(IApplicationLifetime appLifetime, IHostingEnvironment hostingEnvironment, AppDataProvider myAppDataProvider)
         {
             _hostingEnvironment = hostingEnvironment;
             _myData = myAppDataProvider;
@@ -32,7 +32,7 @@ namespace LightningMessage.Controllers
             ViewData["Message"] = _myData.GetAppData.Message;
             return View();
         }
-        
+
         [Route("sendMessage/{memo}")]
         public IActionResult SendMessage(string memo)
         {
@@ -49,7 +49,6 @@ namespace LightningMessage.Controllers
 
             string outputFileName = Path.Combine(_myData.BillsPath, filename);
             HttpContext.Session.Set("QRFilename", Encoding.ASCII.GetBytes(outputFileName));
-
 
             using (MemoryStream memory = new MemoryStream())
             {
@@ -80,7 +79,7 @@ namespace LightningMessage.Controllers
             (invoiceString, qrCode, RHash) = lnd.GetInvoice((long)Convert.ToDouble(satoshis), memo);
             string filename = invoiceString.Substring(0, 20) + ".jpg";
 
-            string outputFileName = Path.Combine(_myData.BillsPath,filename);
+            string outputFileName = Path.Combine(_myData.BillsPath, filename);
 
             HttpContext.Session.Set("QRFilenameHistory", Encoding.ASCII.GetBytes(outputFileName));
 
@@ -96,7 +95,7 @@ namespace LightningMessage.Controllers
 
             byte[] hasharray = RHash.ToByteArray();
             HttpContext.Session.Set("HashHistory", hasharray);
-            return new JsonResult(filename);
+            return new JsonResult(new { billFilename = filename, billText = invoiceString });
         }
 
         private Lightning GetLightning()
@@ -104,13 +103,13 @@ namespace LightningMessage.Controllers
             Lightning lnd = new Lightning(_myData.CertLocation, _myData.MacLocation, _myData.lndGRPC);
             return lnd;
         }
-        
+
         [Route("checkpaid")]
         public async Task<IActionResult> CheckPay()
         {
             byte[] hasharray = HttpContext.Session.Get("Hash");
             Google.Protobuf.ByteString RHash = Google.Protobuf.ByteString.CopyFrom(hasharray);
-            Lightning lnd =  GetLightning();
+            Lightning lnd = GetLightning();
             await lnd.ResponseStreaming(RHash);
             _myData.GetAppData.Message = _myData.GetAppData.MessageTemp;
             _myData.GetAppData.MessageStack.Enqueue(_myData.GetAppData.Message);
@@ -136,11 +135,14 @@ namespace LightningMessage.Controllers
             Lightning lnd = GetLightning();
             await lnd.ResponseStreaming(RHash);
             string returnMessage = "<ul>\n";
-            for(int i= _myData.GetAppData.MessageStack.Count-1;i>=0;i--)
+            for (int i = _myData.GetAppData.MessageStack.Count - 1; i >= 0; i--)
             {
                 returnMessage += "<li>" + _myData.GetAppData.MessageStack.ToArray()[i] + "</li>\n";
             }
             returnMessage += "</ul>";
+
+            _myData.SaveLog("View Messages");
+
             try
             {
                 System.IO.File.Delete(Encoding.ASCII.GetString(HttpContext.Session.Get("QRFilenameHistory")));
@@ -149,7 +151,6 @@ namespace LightningMessage.Controllers
             {
 
             }
-            
             return new JsonResult(returnMessage);
         }
 
@@ -173,6 +174,6 @@ namespace LightningMessage.Controllers
             await Task.Delay(60000);
             return new JsonResult(null);
         }
-        
+
     }
 }

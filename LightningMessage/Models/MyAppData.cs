@@ -18,6 +18,7 @@ namespace LightningMessage.Models
         private MyAppData _data;
         private string _last10Location;
         private string _lastAllLocation;
+        private string _logLocation;
         public string CertLocation { get; set; }
         public string MacLocation { get; set; }
         public string BillsPath { get; set; }
@@ -42,11 +43,12 @@ namespace LightningMessage.Models
 
             _last10Location = Path.Combine(hostingEnvironment.WebRootPath, Configuration["last10Location"]);
             _lastAllLocation = Path.Combine(hostingEnvironment.WebRootPath, Configuration["lastAllLocation"]);
+            _logLocation = Path.Combine(hostingEnvironment.WebRootPath, Configuration["logLocation"]);
 
             lndGRPC = Configuration["lndGRPC"];
 
-            for (int i=1;i<11;i++)
-                _data.MessageStack.Enqueue("Init Message " +i.ToString());
+            for (int i = 1; i < 11; i++)
+                _data.MessageStack.Enqueue("Init Message " + i.ToString());
             ReadLastTen(_last10Location);
             _data.Message = _data.MessageStack.ToArray()[9];
         }
@@ -63,7 +65,7 @@ namespace LightningMessage.Models
         }
         public void ReadLastTen(string location)
         {
-            string last10text =File.ReadAllText(location);
+            string last10text = File.ReadAllText(location);
             string[] last10texts = last10text.Split("\r\n");
             for (int i = 0; i < 10; i++)
             {
@@ -74,16 +76,23 @@ namespace LightningMessage.Models
         }
         public void Save()
         {
-            string alltext="";
+            string alltext = "";
             foreach (string msg in _data.MessageStack)
             {
                 alltext += msg + "\r\n";
             }
             File.WriteAllText(_last10Location, alltext);
-            
+
             string lastAlltext = File.ReadAllText(_lastAllLocation);
-            lastAlltext += "\r\n" + _data.MessageStack.ToArray()[9];
+            lastAlltext += _data.MessageStack.ToArray()[9] + "\r\n";
             File.WriteAllText(_lastAllLocation, lastAlltext);
+            SaveLog(_data.MessageStack.ToArray()[9]);
+        }
+        public void SaveLog(string logItem)
+        {
+            string logText = File.ReadAllText(_logLocation);
+            logText += string.Format("{0:G}: ", System.DateTime.Now) + logItem + "\r\n";
+            File.WriteAllText(_logLocation, logText);
         }
     }
 }

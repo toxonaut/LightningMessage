@@ -40,7 +40,7 @@ namespace LightningMessage
             {
                 routes.MapRoute(
                     name: "default",
-                    template: "{controller=Demo}/{action=Index}/{id?}");
+                    template: "{controller=Lightning}/{action=Index}/{id?}");
             });
             
         }
