@@ -33,7 +33,7 @@ namespace LightningMessage.Controllers
             return View();
         }
 
-        [Route("sendMessage/{memo}")]
+        [Route("sendMessage/{*memo}")]
         public IActionResult SendMessage(string memo)
         {
             Lightning lnd = GetLightning();
