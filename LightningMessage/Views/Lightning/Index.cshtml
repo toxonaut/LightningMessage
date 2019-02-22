@@ -32,6 +32,7 @@
             const $memo = document.querySelector('#memo');
             const $resultSatoshi = document.querySelector('#resultSatoshi');
             const $resultUSD = document.querySelector('#resultUSD');
+            const $resultChannelUSD = document.querySelector('#resultChannelUSD');
             const typeHandler = function (e) {
                 $resultSatoshi.innerHTML = e.target.value.length;
                 $resultUSD.innerHTML = round((e.target.value.length * usd) / 100000000, 5);
@@ -110,6 +111,46 @@
                 });
             });
 
+            $('#buttonPayChannel').click(function () {
+                var textbox = document.getElementById("channelMemo");
+                if (textbox.value.length <= 90 && textbox.value.length >= 80 && textbox.value.includes("@@") && textbox.value.includes(":")) {
+                    var channelMemo = $('#channelMemo').val();
+                    $.ajax({
+                        type: 'GET',
+                        url: '/msg/sendChannel/' + channelMemo,
+                        success: function (result) {
+                            var image = '<img src="Bills/' + result.channelBillFilename + '" alt="Bill" width="500" height="500">';
+                            $('#resultImageChannel').html(image);
+                            $('#channelBillText').text(result.channelBillText);
+                            $('#copyEditBillButton').show();
+                            $.ajax({
+                                type: 'GET',
+                                url: '/msg/checkpaidChannel/',
+                                success: function (result) {
+                                    var image = '<img src="Bills/' + result.paid + '" alt="Bill" width="500" height="500">';
+                                    $('#resultImageChannel').html(image);
+                                    $.ajax({
+                                        type: 'GET',
+                                        url: '/msg/wait/',
+                                        success: function (result) {
+                                            $('#ChannelFieldset').hide();
+                                            $('#resultImageChannel').html("");
+                                            $('#copyChannelBillButton').hide();
+                                            document.getElementById("channelMemo").value = '';
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+                else {
+                    alert("Make sure the input is in the following format <Public key>@@<IP>:<Port>")
+                }
+            });
+
+
+
             $('#EditButton').click(function () {
                 $('#billText').text("");
                 $('#EditFieldset').toggle();
@@ -124,6 +165,12 @@
             });
             $('#NodeButton').click(function () {
                 $('#NodeFieldset').toggle();
+            });
+            $('#ChannelButton').click(function () {
+                $resultChannelUSD.innerHTML = round(usd / 100 * 1.5, 5);
+                $('#channelBillText').text("");
+                $('#ChannelFieldset').toggle();
+
             });
 
             $('#copyNodeButton').click(function () {
@@ -164,18 +211,20 @@
         function parseJson(json) {
             usd = json["bpi"]["USD"]["rate_float"];
             document.getElementById("price").innerHTML = round(usd, 1);
+            document.getElementById("price2").innerHTML = round(usd, 1);
         }
 
     </script>
 </head>
 <body>
     <fieldset style="border-width:0px;">
-        <div id="BigMemo" class="cloud-text cloud-title">@ViewData["Message"]</div>
+        <div id="BigMemo" class="cloud-text cloud-title" style="@ViewData["sizer"]">@ViewData["Message"]</div>
     </fieldset>
     <fieldset id="Menu" class="normal-menu">
         <input type="button" class="btn btn-primary" value="Edit Text" id="EditButton" />
         <input type="button" class="btn btn-primary" value="Show History" id="HistoryButton" />
-        <input type="button" class="btn btn-primary" value="Node info" id="NodeButton" />
+        <input type="button" class="btn btn-primary" value="Node Info" id="NodeButton" />
+        <input type="button" class="btn btn-primary" value="Buy Channel" id="ChannelButton" />
     </fieldset>
     <fieldset id="EditFieldset" class="normal normal-edit">
         Your message: <input type="text" id="memo" size="30" />
@@ -200,6 +249,15 @@
             <img src="~/css/clippy.svg" class="btn-pic" alt="Copy to clipboard">
         </button>
         <div id="historyText"></div>
+    </fieldset>
+    <fieldset id="ChannelFieldset" class="normal normal-edit">
+        Paste your Node: <input type="text" id="channelMemo" size="30" /> &nbsp;and pay
+        <input type="button" value="25 KSat" class="btn btn-primary" id="buttonPayChannel" /> &nbsp; to get a 1.5 MSat ($<span class="normal" id="resultChannelUSD"></span> USD) channel at a price of $<span class="normal" id="price2"></span> USD per Bitcoin within 24h
+        <div id="resultImageChannel"></div>
+        <span id="channelBillText"></span>
+        <button id="copyChannelBillButton" style="display: none" class="btn btn-primary">
+            <img src="~/css/clippy.svg" class="btn-pic" alt="Copy to clipboard">
+        </button>
     </fieldset>
 </body>
 </html>
